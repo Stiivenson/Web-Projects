@@ -125,7 +125,7 @@ function filter_n_search(){
 
 function load_data(){
     const cards_wrapper = document.querySelector('.goods');
-    return fetch('db/db.json')
+    return fetch('app/db/db.json')
         .then((response) => {
             if (response.ok){
                 return response.json();
