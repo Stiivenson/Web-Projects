@@ -120,12 +120,11 @@ function filter_n_search(){
 
 //---<end filter_discount
 
-
 //--->load_data
 
 function load_data(){
     const cards_wrapper = document.querySelector('.goods');
-    return fetch('app/db/db.json')
+    return fetch('db/db.json')
         .then((response) => {
             if (response.ok){
                 return response.json();
@@ -163,7 +162,6 @@ function render_data(data){
     });
 }
 //---<end load_data
-
 
 //--->catalog
 
@@ -207,7 +205,6 @@ function render_catalog(){
         });    
     }
 }
-
 //---<end catalog
 
 load_data().then((data) => {
