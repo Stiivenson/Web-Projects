@@ -1,5 +1,5 @@
 {
-  "name": "Bookmaker",
+  "name": "bookmaker",
   "version": "1.0.0",
   "description": "First App on Electron. Saves user's urls to LocalStorage.",
   "main": "./app/main.js",
