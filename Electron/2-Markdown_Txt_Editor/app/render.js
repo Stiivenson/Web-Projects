@@ -10,7 +10,11 @@ const {remote, ipcRenderer} = require('electron'),
     mainProcess = remote.require('./main.js'),
     //Getting a reference to the current window in the renderer process
     currentWindow = remote.getCurrentWindow();
-      
+//Declaring global variables for keeping track of the current file
+let filePath = null,
+    originalContent = ' ';
+const path = require('path');
+
 const markdownView = document.querySelector('#markdown'),
       htmlView = document.querySelector('#html'),
       newFileBtn = document.querySelector('#new_file'),
@@ -44,6 +48,19 @@ newFileBtn.addEventListener('click', () => {
 
 //Listening for messages on the file-opened channel
 ipcRenderer.on('file-opened', (event, file, content) => {
+    //Track path of opened file and changes of original content
+    filePath = file;
+    originalContent = content;
+
     markdownView.value = content;
     renderMarkdownToHTML(content);
+    updateUserInterface();
 });
+
+//Updating the window title based on the current file
+const updateUserInterface = () => {
+    let title = 'Fire Sale';
+    //If a file is open, prepends the name of that file to the title
+    if (filePath) { title = `${path.basename(filePath)} - ${title}`;}
+    currentWindow.setTitle(title);
+};

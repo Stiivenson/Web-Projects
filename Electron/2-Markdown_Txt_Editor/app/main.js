@@ -12,7 +12,7 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
       { name: 'Markdown Files', extensions: ['md', 'markdown'] }
     ]
   }).then(result => {
-    if (!result.canseled) openFile(targetWindow, result.filePaths);
+    if (!result.canseled) openFile(targetWindow, result.filePaths[0]);
   }).catch(err => {
     console.log(err);
   })
@@ -20,7 +20,7 @@ const getFileFromUser = exports.getFileFromUser = (targetWindow) => {
 
 //Sending file to render
 const openFile = (targetWindow, file) => {
-  const content = fs.readFileSync(file[0]).toString();
+  const content = fs.readFileSync(file).toString();
   //Broadcasting the name of the file and its contents over the file-opened channel
   targetWindow.webContents.send('file-opened', file, content);
 };
