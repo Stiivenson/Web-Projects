@@ -12,7 +12,7 @@ const {remote, ipcRenderer} = require('electron'),
     currentWindow = remote.getCurrentWindow();
 //Declaring global variables for keeping track of the current file
 let filePath = null,
-    originalContent = ' ';
+    originalContent = '';
 const path = require('path');
 
 const markdownView = document.querySelector('#markdown'),
@@ -36,6 +36,7 @@ const renderMarkdownToHTML = (markdown) => {
 markdownView.addEventListener('keyup', (event) => {
     const currentContent = event.target.value;
     renderMarkdownToHTML(currentContent);
+    updateUserInterface(currentContent !== originalContent);
 });
 
 openFileBtn.addEventListener('click', () => {
@@ -46,21 +47,117 @@ newFileBtn.addEventListener('click', () => {
     mainProcess.createWindow();
 });
 
-//Listening for messages on the file-opened channel
-ipcRenderer.on('file-opened', (event, file, content) => {
-    //Track path of opened file and changes of original content
+saveHtmlBtn.addEventListener('click', () => {
+    mainProcess.saveHtml(currentWindow, htmlView.innerHTML);
+});
+
+saveMarkdownBtn.addEventListener('click', () => {
+    mainProcess.saveMarkdown(currentWindow, filePath, markdownView.value);
+});
+
+revertBtn.addEventListener('click', () => {
+    markdownView.value = originalContent;
+    renderMarkdownToHTML(originalContent);
+});
+
+//Refactoring the process of displaying a new file
+const renderFile = (file, content) => {
     filePath = file;
     originalContent = content;
 
     markdownView.value = content;
     renderMarkdownToHTML(content);
-    updateUserInterface();
+    updateUserInterface(false);
+};
+
+//Listening for messages on the file-opened channel
+ipcRenderer.on('file-opened', (event, file, content, isEdited) => {
+    if (isEdited) {
+        remote.dialog.showMessageBox(currentWindow,{
+            type: 'warning',
+            title: 'Overwrite Current Unsaved Changes?',
+            message: 'Opening a new file in this window will overwrite your unsaved changes. Open this file anyway?',
+            buttons: [ 'Yes', 'Cancel' ],
+            defaultId: 0,
+            cancelId: 1
+        }).then(result => {
+            console.log(result.response);
+            if (result.response === 1) return;
+            else renderFile(file, content);
+        }).catch(err => {
+            console.log(err);
+        })
+    } else
+        renderFile(file, content);    
+});
+
+//Prompting the user when a file changes
+ipcRenderer.on('file-changed', (event, file, content) => {
+    remote.dialog.showMessageBox(currentWindow,{
+        type: 'warning',
+        title: 'Overwrite Current Unsaved Changes?',
+        message: 'Another application has changed this file. Load changes?',
+        buttons: [ 'Yes', 'Cancel' ],
+        defaultId: 0,
+        cancelId: 1
+    }).then(result => {
+        if (result.response === 1) return;
+        renderFile(file, content);
+    }).catch(err => {
+        console.log(err);
+    })
 });
 
 //Updating the window title based on the current file
-const updateUserInterface = () => {
+const updateUserInterface = (isEdited) => {
     let title = 'Fire Sale';
     //If a file is open, prepends the name of that file to the title
     if (filePath) { title = `${path.basename(filePath)} - ${title}`;}
+    if (isEdited) {title = `${title} (Edited)`;}
+
     currentWindow.setTitle(title);
+    currentWindow.setDocumentEdited(isEdited);
+    mainProcess.isFileEdited(currentWindow, isEdited);
+
+    saveMarkdownBtn.disabled = !isEdited;
+    revertBtn.disabled = !isEdited; 
 };
+
+document.addEventListener('dragstart', event => event.preventDefault());
+document.addEventListener('dragover', event => event.preventDefault());
+document.addEventListener('dragleave', event => event.preventDefault());
+document.addEventListener('drop', event => event.preventDefault());
+
+//This will always be an array in case the user selects multiple items. The application supports only one file at a time. We grab the first item in the array
+const getDraggedFile = (event) => event.dataTransfer.items[0];
+//This is similar to the getDraggedFile(), but after the user has officially dropped the file, we have access to the file itself, not just its metadata
+const getDroppedFile = (event) => event.dataTransfer.files[0];
+//This helper function returns true or false if the file’s type is in the array of supported file types
+const fileTypeIsSupported = (file) => {
+    return ['text/plain', 'text/markdown'].includes(file.type);
+};
+
+//Adding and removing classes on dragover and dragleave
+markdownView.addEventListener('dragover', (event) => {
+    const file = getDraggedFile(event);
+    if (fileTypeIsSupported(file))
+        markdownView.classList.add('drag-over');
+    else    
+        markdownView.classList.add('drag-error');
+});
+markdownView.addEventListener('dragleave', () => {
+    markdownView.classList.remove('drag-over');
+    markdownView.classList.remove('drag-error');
+});
+
+//Drag-and-drop functionality
+markdownView.addEventListener('drop', (event) => {
+    const file = getDroppedFile(event);
+    if (fileTypeIsSupported(file))
+        mainProcess.openFile(currentWindow, file.path);
+    else    
+        alert('That typeis not supported!');
+
+    markdownView.classList.remove('drag-over');
+    markdownView.classList.remove('drag-error');
+});
