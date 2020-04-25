@@ -1,4 +1,4 @@
-var header = $('header'),
+let header = $('header'),
 head_sectn_name = $('.head_sectn_name'),
 loader = $('.loader'),
 loader_time = $(".loader .percent"),
