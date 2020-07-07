@@ -10,7 +10,7 @@
   "author": "tiiv",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^6.0.4"
+    "electron": "^9.1.0"
   },
   "dependencies": {
     "dompurify": "^1.0.11",
